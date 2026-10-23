@@ -29,6 +29,13 @@
             background: radial-gradient(circle at 75% 15%, #1e6fe0 0, transparent 50%), radial-gradient(circle at 10% 90%, #2a1f8f 0, transparent 55%), linear-gradient(160deg, #0c0a52, #0a2a8c 60%, #08174f)
         }
 
+        .bg::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1.5px 1.5px at 28% 72%, #fff, transparent), radial-gradient(2px 2px at 44% 10%, #cfe8ff, transparent), radial-gradient(1.5px 1.5px at 63% 85%, #fff, transparent), radial-gradient(2px 2px at 78% 38%, #cfe8ff, transparent), radial-gradient(1.5px 1.5px at 90% 66%, #fff, transparent), radial-gradient(1.5px 1.5px at 6% 50%, #fff, transparent), radial-gradient(1.5px 1.5px at 55% 45%, #fff, transparent)
+        }
+
         .bg::after {
             content: "";
             position: absolute;
@@ -36,12 +43,21 @@
             background: repeating-linear-gradient(0deg, rgba(140, 210, 255, .06) 0 1px, transparent 1px 44px), repeating-linear-gradient(90deg, rgba(140, 210, 255, .06) 0 1px, transparent 1px 44px)
         }
 
-        #svg {
+        #gl {
             position: fixed;
             inset: 0;
             width: 100%;
             height: 100%;
             z-index: 1
+        }
+
+        #svg {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none
         }
 
         .hd {
@@ -212,7 +228,7 @@
             border: 0;
             z-index: 4;
             opacity: 0;
-            transition: opacity 2s;
+            transition: opacity 1.8s;
             background: #fff
         }
 
@@ -220,9 +236,10 @@
             opacity: 1
         }
 
-        body.rev .hd {
+        body.rev .hd,
+        body.rev #gl {
             opacity: 0;
-            transition: opacity 1.2s
+            transition: opacity 1.4s
         }
 
         @keyframes pl {
@@ -241,6 +258,7 @@
 
 <body>
     <div class="bg"></div>
+    <canvas id="gl"></canvas>
     <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
     <div class="hd">
         <img src="sihalanewsline.png" alt="සිහළ News Line" />
@@ -259,45 +277,54 @@
             var SITE = 'https://sihalanewsline.blogspot.com/';
             var AUDIO = 'sihalanewsline.wav';
             var MODE = 'iframe';
-            var MW = 1000, MH = 500;
-            var W = [[80.77, 7.87], [114, 22], [139.7, 35.7], [202.2, 24], [241.8, 34], [286, 40.7], [359.9, 51.5], [391.2, 32], [415.3, 25.2], [440.77, 7.87]];
-            var N = W.length, lons = W.map(function (w) { return w[0] }), lats = W.map(function (w) { return w[1] });
-            function mx(l) { return (l + 180) / 360 * MW }
-            function my(l) { return (90 - l) / 180 * MH }
-            var KX = mx(80.77), KY = my(7.87);
+            /* ONE continuous flight, seconds after click:
+               TA            launch from Sri Lanka
+               TA..TD        rocket flies a full lap round the world on a single great circle (smooth, constant speed)
+               ZS..ZE        Earth zooms out smoothly while flying
+               TD..TX        camera slows to a stop, rocket keeps going and slides straight off the Earth
+               TX..          rocket flies away along the same straight line, website fades in, all done by TE=21s */
+            var TA = 1.3, RT = 1.6, DD = 3.2, TX = 16, TD = TX - DD, ZS = 4, ZE = 15.2;
+            var TR = TX + .4, TQ = TR + 2.2, TE = 21;
+            var OM = .216;      /* rocket speed around the Earth, rad/s */
+            var BRG = 335;     /* route bearing from Sri Lanka (clockwise from north): India, Central Asia, Russia, Scandinavia coast, Canada, USA, Central America = mostly over land */
+            var TAU = Math.PI * 2, D2R = Math.PI / 180;
             function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
-            function cr(a, i, t) { var p0 = a[Math.max(i - 1, 0)], p1 = a[i], p2 = a[i + 1], p3 = a[Math.min(i + 2, a.length - 1)]; return .5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t) }
+            function wrap(x) { return ((x + 540) % 360 + 360) % 360 - 180 }
 
-            var PX = [], PY = [], PC = [0], M = 3000;
-            for (var i = 0; i <= M; i++) {
-                var u = i / M * (N - 1), sg = Math.min(Math.floor(u), N - 2), tt = u - sg;
-                PX.push(mx(cr(lons, sg, tt))); PY.push(my(Math.max(-75, Math.min(75, cr(lats, sg, tt)))));
-                if (i > 0) PC.push(PC[i - 1] + Math.hypot(PX[i] - PX[i - 1], PY[i] - PY[i - 1]));
+            /* great-circle route: starts at Sri Lanka and follows the land masses (about 170 degrees), never returns */
+            var SL = [80.77, 7.87];
+            function vec(p) { var l = p[0] * D2R, f = p[1] * D2R, c = Math.cos(f); return [c * Math.cos(l), c * Math.sin(l), Math.sin(f)] }
+            function ll(v) { return [Math.atan2(v[1], v[0]) / D2R, Math.asin(Math.max(-1, Math.min(1, v[2]))) / D2R] }
+            function norm(v) { var m = Math.hypot(v[0], v[1], v[2]); return [v[0] / m, v[1] / m, v[2] / m] }
+            var A = vec(SL), L0 = SL[0] * D2R, F0 = SL[1] * D2R, b = BRG * D2R;
+            var NN = [-Math.sin(F0) * Math.cos(L0), -Math.sin(F0) * Math.sin(L0), Math.cos(F0)], EE = [-Math.sin(L0), Math.cos(L0), 0];
+            var B = norm([Math.cos(b) * NN[0] + Math.sin(b) * EE[0], Math.cos(b) * NN[1] + Math.sin(b) * EE[1], Math.cos(b) * NN[2] + Math.sin(b) * EE[2]]);
+            function gc(t) { var c = Math.cos(t), s = Math.sin(t); return [c * A[0] + s * B[0], c * A[1] + s * B[1], c * A[2] + s * B[2]] }
+            function tg(t) { var c = Math.cos(t), s = Math.sin(t); return [-s * A[0] + c * B[0], -s * A[1] + c * B[1], -s * A[2] + c * B[2]] }
+            /* rocket angle along the circle (smooth ramp-up, then constant speed) */
+            function theta(T) { var x = T - TA; if (x <= 0) return 0; if (x < RT) { var u = x / RT; return OM * RT * (u * u * u - u * u * u * u / 2) } return OM * RT / 2 + OM * (x - RT) }
+            /* how far the rocket gets ahead of the camera once the camera slows down */
+            function delta(T) { var y = (T - TD) / DD; if (y <= 0) return 0; if (y < 1) return OM * DD * (y * y * y - y * y * y * y / 2); return OM * DD * (y - .5) }
+            /* camera: Earth keeps north at the top at the start, then turns naturally as the rocket flies round */
+            function camRot(t) { var cl = ll(gc(t)); return [-cl[0], -cl[1], 0] }
+            var GS = 1;
+            (function () {
+                var c = gc(0), T = tg(0), cl = ll(c), q = ll(norm([c[0] + .02 * T[0], c[1] + .02 * T[1], c[2] + .02 * T[2]]));
+                function ang(g) { var r = d3.geoRotation([-cl[0], -cl[1], g])(q); return Math.atan2(-Math.sin(r[1] * D2R), Math.cos(r[1] * D2R) * Math.sin(r[0] * D2R)) / D2R }
+                GS = wrap(ang(20) - ang(0)) > 0 ? 1 : -1;
+            })();
+            var HC = -30, TG0 = 4, HI = wrap(BRG - 90);   /* fly-out direction (towards the top-right corner) and the slow camera roll that gets us there */
+            function calibrate() {
+                HC = Math.atan2(-cy, cx) / D2R;
             }
-            var L = PC[M];
-            function at(d) {
-                d = Math.max(0, Math.min(L, d));
-                var lo = 0, hi = M;
-                while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (PC[mid] > d) hi = mid; else lo = mid }
-                var f = (d - PC[lo]) / ((PC[hi] - PC[lo]) || 1);
-                return { x: PX[lo] + (PX[hi] - PX[lo]) * f, y: PY[lo] + (PY[hi] - PY[lo]) * f };
-            }
-            var PA = .07, PB = .09, PT = 1 - PA / 2 - PB / 2;
-            function prof(s) { var p; if (s < PA) p = s * s / (2 * PA); else if (s <= 1 - PB) p = PA / 2 + (s - PA); else { var q = s - (1 - PB); p = PA / 2 + (1 - PB - PA) + q - q * q / (2 * PB) } return Math.min(1, p / PT) }
+            var tp = d3.geoOrthographic().translate([0, 0]).scale(1000);
+            /* heading of the rocket on screen if the camera had no roll (north always up) */
+            function nat(tc, t) { tp.rotate(camRot(tc)); var pa = tp(ll(gc(t))), pb = tp(ll(gc(t + .02))); return (pa && pb) ? Math.atan2(pb[1] - pa[1], pb[0] - pa[0]) / D2R : null }
+            function head(t) { var pa = proj(ll(gc(t))), pb = proj(ll(gc(t + .02))); return (pa && pb) ? Math.atan2(pb[1] - pa[1], pb[0] - pa[0]) / D2R : null }
 
             var svg = document.getElementById('svg');
-            svg.innerHTML = '<g id="cam">'
-                + '<g id="tile"><path id="grat" fill="none" stroke="rgba(140,210,255,.16)" stroke-width="1" vector-effect="non-scaling-stroke"/>'
-                + '<path id="land" fill="rgba(60,150,255,.30)" stroke="rgba(150,215,255,.8)" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
-                + '<path id="lk" fill="#d4f21b" stroke="#e8441c" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
-                + '<circle cx="' + KX + '" cy="' + KY + '" r="1.1" fill="#e8441c" stroke="#fff" stroke-width=".4"/></g>'
-                + '<use href="#tile" x="-' + MW + '"/><use href="#tile" x="' + MW + '"/><use href="#tile" x="' + 2 * MW + '"/>'
-                + '<path id="tr1" fill="none" stroke="rgba(232,68,28,.45)" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
-                + '<path id="tr2" fill="none" stroke="#ff6a2a" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 9" vector-effect="non-scaling-stroke"/>'
-                + '<circle id="rg1" cx="' + KX + '" cy="' + KY + '" r="2" fill="none" stroke="#d4f21b" stroke-width="2" vector-effect="non-scaling-stroke"/>'
-                + '<circle id="rg2" cx="' + (KX + MW) + '" cy="' + KY + '" r="2" fill="none" stroke="#d4f21b" stroke-width="2" vector-effect="non-scaling-stroke"/></g>'
-                + '<g id="rk" style="filter:drop-shadow(0 6px 6px rgba(0,0,0,.5))"><g id="fl"><polygon points="0,0 -14,-6 -32,0 -14,6" fill="#ff7a1f"/><polygon points="0,0 -8,-3.5 -19,0 -8,3.5" fill="#d4f21b"/></g>'
-                + '<defs><clipPath id="lc"><rect x="-17" y="-9" width="18" height="18" rx="3"/></clipPath></defs>'
+            svg.innerHTML = '<defs><clipPath id="lc"><rect x="-17" y="-9" width="18" height="18" rx="3"/></clipPath></defs>'
+                + '<g id="rk" style="filter:drop-shadow(0 5px 5px rgba(0,0,0,.45))"><g id="fl"><polygon points="0,0 -14,-6 -32,0 -14,6" fill="#ff7a1f"/><polygon points="0,0 -8,-3.5 -19,0 -8,3.5" fill="#d4f21b"/></g>'
                 + '<polygon points="-34,-8 -51,-25 -20,-10" fill="#d4f21b"/><polygon points="-34,-8 -20,-10 -28,-8" fill="#a9c40f"/>'
                 + '<polygon points="-34,8 -51,25 -20,10" fill="#1e6fe0"/><polygon points="-34,8 -20,10 -28,8" fill="#154fa6"/>'
                 + '<polygon points="-34,-10 14,-10 14,10 -34,10" fill="#f6f8ff"/><polygon points="-34,0 14,0 14,10 -34,10" fill="#cdd5f2"/>'
@@ -306,46 +333,96 @@
                 + '<line x1="-34" y1="0" x2="-17" y2="0" stroke="#aab4de" stroke-width=".8"/><line x1="1" y1="0" x2="14" y2="0" stroke="#aab4de" stroke-width=".8"/>'
                 + '<image href="sihalanewsline.png" x="-17" y="-9" width="18" height="18" preserveAspectRatio="xMidYMid slice" clip-path="url(#lc)"/>'
                 + '<rect x="-17" y="-9" width="18" height="18" rx="3" fill="none" stroke="#2a1f8f" stroke-width="1.4"/></g>';
+            var rk = document.getElementById('rk'), fl = document.getElementById('fl');
 
-            var proj = d3.geoEquirectangular().scale(MW / (2 * Math.PI)).translate([MW / 2, MH / 2]);
-            var gp = d3.geoPath(proj);
-            document.getElementById('grat').setAttribute('d', gp(d3.geoGraticule10()));
+            var cv = document.getElementById('gl'), ctx = cv.getContext('2d');
+            var proj = d3.geoOrthographic().precision(.5), gpath = d3.geoPath(proj, ctx);
+            var grat = d3.geoGraticule10(), land = null, lk = null;
 
             var btn = document.getElementById('btn'), ready = false;
             function enable() { if (ready) return; ready = true; btn.disabled = false; btn.firstChild.textContent = '▶ ආරම්භ කරන්න' }
             function j(u) { return fetch(u).then(function (r) { return r.json() }) }
             j('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json').then(function (w) {
-                document.getElementById('land').setAttribute('d', gp(topojson.feature(w, w.objects.land)))
+                land = topojson.feature(w, w.objects.land)
             }).catch(function () { }).then(function () {
                 return j('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json')
             }).then(function (w) {
                 var g = w.objects.countries.geometries.filter(function (x) { return String(x.id) === '144' });
-                if (g.length) document.getElementById('lk').setAttribute('d', gp(topojson.feature(w, { type: 'GeometryCollection', geometries: g })))
+                if (g.length) lk = topojson.feature(w, { type: 'GeometryCollection', geometries: g })
             }).catch(function () { }).then(enable);
             setTimeout(enable, 6000);
 
-            var vw = 0, vh = 0, Kj = 1, Kz = 1, rs = 1;
+            var vw = 0, vh = 0, cx = 0, cy = 0, R = 1, RF = 1, rs = 1;
             function resize() {
                 vw = window.innerWidth; vh = window.innerHeight;
-                Kj = Math.max(vw / MW * 1.8, vh / MH * 1.05); Kz = Kj * 4.2; rs = Math.max(.9, Math.min(1.5, vw / 900));
+                var dpr = Math.min(window.devicePixelRatio || 1, 2);
+                cv.width = vw * dpr; cv.height = vh * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                cx = vw / 2; cy = vh * .5;
+                R = Math.min(vh * .46, vw * .46);          /* zoomed-out globe (kept large) */
+                RF = Math.hypot(vw, vh) / 2 * 1.3;         /* globe fills the whole screen */
+                rs = Math.max(.8, Math.min(1.25, vw / 1100));
+                calibrate();
             }
             window.addEventListener('resize', resize); resize();
-
-            var camEl = document.getElementById('cam'), rk = document.getElementById('rk'), fl = document.getElementById('fl');
-            var tr1 = document.getElementById('tr1'), tr2 = document.getElementById('tr2'), rg1 = document.getElementById('rg1'), rg2 = document.getElementById('rg2');
 
             var audio = new Audio(AUDIO); audio.preload = 'auto';
             var qr = document.getElementById('qr');
             document.getElementById('qx').onclick = function () { qr.classList.remove('show') };
-            var TA = 1.8, TB = 12.5, TC = 14.5, TR = 14.2, TQ = 15.2, TE = 16, qrShown = false;
 
-            var t0 = null, site = null, done = false, last = 0, hh = -40, dstr = '', lx = -1e9, ly = -1e9;
-            var cam = { x: KX, y: KY, k: 0 };
+            var t0 = null, site = null, done = false, last = 0, qrShown = false;
+            var mk = 1, lh = -25, hh = -25, fy = 1, lrx = null, lry = 0, vx = 0, vy = 0, D = null;
             btn.onclick = function () {
                 audio.play().catch(function () { });
                 t0 = performance.now();
                 document.getElementById('go').classList.add('hide');
             };
+
+            function trailStroke() {
+                ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+                ctx.setLineDash([22, 12]);
+                ctx.strokeStyle = 'rgba(60,170,255,.45)'; ctx.lineWidth = 11; ctx.stroke();
+                ctx.shadowColor = '#5cc8ff'; ctx.shadowBlur = 14;
+                ctx.strokeStyle = '#d6f5ff'; ctx.lineWidth = 5; ctx.stroke();
+                ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+                ctx.setLineDash([]);
+            }
+
+            function draw(gx, gy, Rp, ps, th, pts) {
+                ctx.clearRect(0, 0, vw, vh);
+                var ag = ctx.createRadialGradient(gx, gy, Rp * .98, gx, gy, Rp * 1.2);
+                ag.addColorStop(0, 'rgba(80,170,255,.55)'); ag.addColorStop(.4, 'rgba(30,111,224,.22)'); ag.addColorStop(1, 'rgba(30,111,224,0)');
+                ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(gx, gy, Rp * 1.2, 0, TAU); ctx.fill();
+                var og = ctx.createRadialGradient(gx - .35 * Rp, gy - .4 * Rp, Rp * .1, gx, gy, Rp);
+                og.addColorStop(0, '#2f86f0'); og.addColorStop(.55, '#1650c0'); og.addColorStop(1, '#0a1c78');
+                ctx.beginPath(); gpath({ type: 'Sphere' }); ctx.fillStyle = og; ctx.fill();
+                ctx.beginPath(); gpath(grat); ctx.strokeStyle = 'rgba(170,220,255,.16)'; ctx.lineWidth = 1; ctx.stroke();
+                if (land) { ctx.beginPath(); gpath(land); ctx.fillStyle = 'rgba(150,228,255,.9)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .8; ctx.stroke() }
+                if (lk) { ctx.beginPath(); gpath(lk); ctx.fillStyle = '#d4f21b'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1; ctx.stroke() }
+                var sp = proj(SL);
+                if (sp && mk > 0) {
+                    ctx.globalAlpha = mk;
+                    ctx.beginPath(); ctx.arc(sp[0], sp[1], Math.max(3, Rp * .004), 0, TAU); ctx.fillStyle = '#e8441c'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.beginPath(); ctx.arc(sp[0], sp[1], Math.max(6, Rp * .004) + ps * Math.max(18, Rp * .025), 0, TAU); ctx.strokeStyle = 'rgba(212,242,27,' + (.9 * (1 - ps)).toFixed(2) + ')'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+                ctx.save(); ctx.beginPath(); ctx.arc(gx, gy, Rp, 0, TAU); ctx.clip();
+                var shd = ctx.createRadialGradient(gx - .4 * Rp, gy - .45 * Rp, Rp * .1, gx - .1 * Rp, gy - .1 * Rp, Rp * 1.45);
+                shd.addColorStop(0, 'rgba(255,255,255,.18)'); shd.addColorStop(.45, 'rgba(255,255,255,0)'); shd.addColorStop(1, 'rgba(2,4,40,.6)');
+                ctx.fillStyle = shd; ctx.fillRect(gx - Rp, gy - Rp, Rp * 2, Rp * 2);
+                ctx.restore();
+                ctx.beginPath(); ctx.arc(gx, gy, Rp, 0, TAU); ctx.strokeStyle = 'rgba(160,225,255,.55)'; ctx.lineWidth = 2; ctx.stroke();
+                /* dashed route round the world */
+                var coords = [], n = Math.ceil(th / .03);
+                for (var i = 0; i <= n; i++)coords.push(ll(gc(Math.min(i * .03, th))));
+                coords.push(ll(gc(th)));
+                ctx.beginPath(); gpath({ type: 'LineString', coordinates: coords }); trailStroke();
+                /* dashed line of the rocket leaving Earth */
+                if (pts && pts.length > 1) {
+                    ctx.beginPath(); ctx.moveTo(gx + pts[0][0] * Rp, gy + pts[0][1] * Rp);
+                    for (var m = 1; m < pts.length; m++)ctx.lineTo(gx + pts[m][0] * Rp, gy + pts[m][1] * Rp);
+                    trailStroke();
+                }
+            }
 
             function frame(now) {
                 if (done) return;
@@ -353,53 +430,48 @@
                 var dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
                 function a(r) { return 1 - Math.exp(-dt * r) }
                 var t = now / 1000, ps = (t % 1.6) / 1.6;
-                var ro = (1 - ps).toFixed(2), rr = 2 + ps * 7;
-                rg1.setAttribute('r', rr); rg2.setAttribute('r', rr); rg1.setAttribute('opacity', ro); rg2.setAttribute('opacity', ro);
-                var K0 = Kz * .85, K1 = Kj * 1.5;
-                if (!cam.k) cam.k = K0;
-                var rx = KX, ry = KY, target = -40, flame = .25, jy = Math.sin(t * 2.2) * 3;
-                if (t0 !== null) {
-                    var T = (now - t0) / 1000;
-                    if (T < TA) {
-                        var e = ease(T / TA);
-                        cam.k = K0 + (K1 - K0) * e; flame = .25 + .75 * e; jy = Math.sin(t * 2.2) * 3 * (1 - e);
-                    } else if (T < TB) {
-                        var s = (T - TA) / (TB - TA), d = prof(s) * L, p = at(d), pa = at(d - 3), pb = at(d + 3);
-                        rx = p.x; ry = p.y;
-                        cam.x += (p.x - cam.x) * a(7); cam.y += (p.y - cam.y) * a(7);
-                        cam.k += (K1 * (1 - .3 * Math.sin(Math.PI * s)) - cam.k) * a(2.5);
-                        target = Math.atan2(pb.y - pa.y, pb.x - pa.x) * 180 / Math.PI;
-                        flame = 1; jy = 0;
-                        if (Math.hypot(p.x - lx, p.y - ly) > 2) {
-                            lx = p.x; ly = p.y;
-                            dstr += (dstr ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
-                            tr1.setAttribute('d', dstr); tr2.setAttribute('d', dstr);
-                        }
-                    } else {
-                        var e2 = ease((T - TB) / (TC - TB));
-                        rx = KX + MW; ry = KY;
-                        cam.x += (rx - cam.x) * a(4); cam.y += (ry - cam.y) * a(4);
-                        cam.k += (K0 - cam.k) * a(1.4);
-                        flame = 1 - .75 * e2; jy = Math.sin(t * 2.2) * 3 * e2;
-                    }
-                    if (T >= TB - 2 && !site && MODE === 'iframe') {
+                var T = t0 === null ? -1 : (now - t0) / 1000;
+                var ez = T >= 0 ? ease(T / TA) : 0, flame = .25 + .75 * ez;
+                var th = theta(T), thc = th - delta(T);
+                var gx = cx, gy = cy, Rp = RF * Math.pow(R / RF, ease((T - ZS) / (ZE - ZS)));
+                var cr = camRot(thc), nh = nat(thc, th);
+                if (nh !== null) cr[2] = GS * wrap(HI + wrap(HC - HI) * ease((T - TG0) / (TX - TG0)) - nh);   /* roll: north-up at the start, then turns smoothly until the rocket heads to the top-right corner */
+                proj.rotate(cr).translate([gx, gy]).scale(Rp);
+                mk = 1 - ease((T - TA) / 1.2);
+                var sc = rs * (.55 + .5 * ez) * (1 - .25 * ease((T - TD) / (TX - TD + 2))), rx = cx, ry = cy, hT = hh;
+                if (T < TX) {
+                    var p = proj(ll(gc(th)));
+                    if (p) { rx = p[0]; ry = p[1] } else { rx = lrx === null ? cx : lrx; ry = lry }
+                    if (lrx !== null && dt > 0) { vx += ((rx - lrx) / dt - vx) * a(12); vy += ((ry - lry) / dt - vy) * a(12) }
+                    lrx = rx; lry = ry;
+                    var hn = head(th); if (hn !== null) { hT = hn; lh = hn }
+                } else {
+                    if (!D) D = { x: lrx, y: lry, hd: lh, sp: Math.hypot(vx, vy), sc: sc, pts: [] };
+                    var dx = Math.cos(D.hd * D2R), dy = Math.sin(D.hd * D2R); hT = D.hd;
+                    D.sp += 900 * ease((T - TX) / .8) * dt;   /* gentle, continuously rising speed */
+                    D.x += dx * D.sp * dt; D.y += dy * D.sp * dt;
+                    rx = D.x; ry = D.y;
+                    var u = Math.min(1, (T - TX) / 1.5);
+                    sc = D.sc * (1 - .25 * u); flame = 1 + u;
+                    if (D.pts.length < 600) { var tt = hh * D2R; D.pts.push([(rx - Math.cos(tt) * 30 * sc - gx) / Rp, (ry - Math.sin(tt) * 30 * sc - gy) / Rp]) }
+                }
+                draw(gx, gy, Rp, ps, Math.min(th, theta(TX)), D ? D.pts : null);
+                hh += wrap(hT - hh) * a(6);
+                fy += ((Math.cos(hh * D2R) < 0 ? -1 : 1) - fy) * a(8);
+                rk.setAttribute('transform', 'translate(' + rx + ' ' + ry + ') rotate(' + hh + ') scale(' + sc + ' ' + (sc * fy) + ')');
+                fl.setAttribute('transform', 'translate(-34 0) scale(' + (flame * (.85 + Math.random() * .3)) + ' 1)');
+                if (T >= 0) {
+                    if (T >= TD - 2 && !site && MODE === 'iframe') {
                         site = document.createElement('iframe'); site.id = 'site'; site.src = SITE; site.title = 'සිහළ News Line';
                         document.body.appendChild(site);
                     }
                     if (T >= TR && !document.body.classList.contains('rev')) {
                         document.body.classList.add('rev');
-                        if (MODE === 'iframe') { site.classList.add('show') } else { setTimeout(function () { location.href = SITE }, 1500) }
+                        if (MODE === 'iframe') { site.classList.add('show') } else { setTimeout(function () { location.href = SITE }, 1200) }
                     }
                     if (T >= TQ && !qrShown) { qrShown = true; qr.classList.add('show') }
-                    if (T >= TE) { done = true; svg.style.display = 'none'; document.querySelector('.bg').style.display = 'none'; return }
+                    if (T >= TE) { done = true; cv.style.display = 'none'; svg.style.display = 'none'; document.querySelector('.bg').style.display = 'none' }
                 }
-                var k = cam.k, cy = cam.y, hv = vh / k / 2;
-                if (MH <= vh / k) cy = MH / 2; else cy = Math.max(hv, Math.min(MH - hv, cy));
-                camEl.setAttribute('transform', 'translate(' + vw / 2 + ' ' + vh / 2 + ') scale(' + k + ') translate(' + (-cam.x) + ' ' + (-cy) + ')');
-                hh += (target - hh) * a(6);
-                var sx = vw / 2 + (rx - cam.x) * k, sy = vh / 2 + (ry - cy) * k + jy;
-                rk.setAttribute('transform', 'translate(' + sx + ' ' + sy + ') rotate(' + hh + ') scale(' + rs + ')');
-                fl.setAttribute('transform', 'translate(-34 0) scale(' + (flame * (.85 + Math.random() * .3)) + ' 1)');
             }
             requestAnimationFrame(frame);
         })();
