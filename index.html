@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="si">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>සිහළ News Line</title>
+    <link rel="icon" href="sihalanewsline.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Yaldevi:wght@700&display=swap" rel="stylesheet" />
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Yaldevi', sans-serif;
+            color: #fff;
+            background: #0a0f55
+        }
+
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: radial-gradient(circle at 75% 15%, #1e6fe0 0, transparent 50%), radial-gradient(circle at 10% 90%, #2a1f8f 0, transparent 55%), linear-gradient(160deg, #0c0a52, #0a2a8c 60%, #08174f)
+        }
+
+        .bg::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(140, 210, 255, .06) 0 1px, transparent 1px 44px), repeating-linear-gradient(90deg, rgba(140, 210, 255, .06) 0 1px, transparent 1px 44px)
+        }
+
+        #svg {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1
+        }
+
+        .hd {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 6;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none
+        }
+
+        .hd img {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 3px solid #1e6fe0;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .45)
+        }
+
+        .tg {
+            display: flex;
+            flex-direction: column;
+            gap: 3px
+        }
+
+        .bn {
+            display: block;
+            transform: skewX(-12deg);
+            padding: 3px 18px;
+            font-weight: 700;
+            font-size: clamp(13px, 3.3vw, 20px);
+            line-height: 1.35;
+            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, .35)
+        }
+
+        .bn span {
+            display: inline-block;
+            transform: skewX(12deg)
+        }
+
+        .b1 {
+            background: #e8441c;
+            color: #fff;
+            border: 2px solid #1e6fe0
+        }
+
+        .b2 {
+            background: #2a1f8f;
+            color: #d4f21b;
+            margin-left: 16px;
+            border: 2px solid #1e6fe0
+        }
+
+        .go {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 9vh;
+            z-index: 6;
+            display: flex;
+            justify-content: center
+        }
+
+        .btn {
+            cursor: pointer;
+            transform: skewX(-12deg);
+            border: 3px solid #1e6fe0;
+            padding: 12px 46px;
+            background: linear-gradient(#ff5a2a, #d93a10);
+            color: #fff;
+            font: 700 clamp(18px, 4.5vw, 25px) 'Yaldevi', sans-serif;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .5);
+            animation: pl 1.8s infinite
+        }
+
+        .btn span {
+            display: inline-block;
+            transform: skewX(12deg)
+        }
+
+        .btn:disabled {
+            opacity: .65;
+            animation: none;
+            cursor: wait
+        }
+
+        .btn:active {
+            transform: skewX(-12deg) scale(.96)
+        }
+
+        .hide {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .7s
+        }
+
+        .qr {
+            position: fixed;
+            left: 50%;
+            bottom: 16px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 12px 10px;
+            background: #fff;
+            border: 3px solid #1e6fe0;
+            border-radius: 14px;
+            box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+            transform: translate(-50%, calc(100% + 60px));
+            opacity: 0;
+            pointer-events: none;
+            transition: transform .9s cubic-bezier(.2, .9, .25, 1.12), opacity .4s
+        }
+
+        .qr.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+            pointer-events: auto
+        }
+
+        .qr img {
+            width: clamp(120px, 32vw, 160px);
+            height: auto;
+            display: block
+        }
+
+        .qr .lb {
+            transform: skewX(-12deg);
+            background: #e8441c;
+            color: #fff;
+            padding: 2px 18px;
+            font-weight: 700;
+            font-size: clamp(14px, 3.6vw, 18px);
+            border: 2px solid #1e6fe0
+        }
+
+        .qr .lb span {
+            display: inline-block;
+            transform: skewX(12deg)
+        }
+
+        .qr .x {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #1e6fe0;
+            background: #2a1f8f;
+            color: #d4f21b;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer
+        }
+
+        #site {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 2s;
+            background: #fff
+        }
+
+        #site.show {
+            opacity: 1
+        }
+
+        body.rev .hd {
+            opacity: 0;
+            transition: opacity 1.2s
+        }
+
+        @keyframes pl {
+
+            0%,
+            100% {
+                box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 0 0 0 rgba(212, 242, 27, .65)
+            }
+
+            50% {
+                box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 0 0 14px rgba(212, 242, 27, 0)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg"></div>
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="hd">
+        <img src="sihalanewsline.png" alt="සිහළ News Line" />
+        <div class="tg"><span class="bn b1"><span>සයිබර් අවකාශයේ</span></span><span class="bn b2"><span>පුවත්
+                    ගවේෂකයා...</span></span></div>
+    </div>
+    <div class="go" id="go"><button class="btn" id="btn" disabled><span>පූරණය වේ...</span></button></div>
+    <div class="qr" id="qr"><button class="x" id="qx" type="button">×</button><img src="qr-snl.png" alt="QR" />
+        <div class="lb"><span>ස්කෑන් කරන්න</span></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+    <script>
+        (function () {
+            var SITE = 'https://sihalanewsline.blogspot.com/';
+            var AUDIO = 'sihalanewsline.wav';
+            var MODE = 'iframe';
+            var MW = 1000, MH = 500;
+            var W = [[80.77, 7.87], [114, 22], [139.7, 35.7], [202.2, 24], [241.8, 34], [286, 40.7], [359.9, 51.5], [391.2, 32], [415.3, 25.2], [440.77, 7.87]];
+            var N = W.length, lons = W.map(function (w) { return w[0] }), lats = W.map(function (w) { return w[1] });
+            function mx(l) { return (l + 180) / 360 * MW }
+            function my(l) { return (90 - l) / 180 * MH }
+            var KX = mx(80.77), KY = my(7.87);
+            function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+            function cr(a, i, t) { var p0 = a[Math.max(i - 1, 0)], p1 = a[i], p2 = a[i + 1], p3 = a[Math.min(i + 2, a.length - 1)]; return .5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t) }
+
+            var PX = [], PY = [], PC = [0], M = 3000;
+            for (var i = 0; i <= M; i++) {
+                var u = i / M * (N - 1), sg = Math.min(Math.floor(u), N - 2), tt = u - sg;
+                PX.push(mx(cr(lons, sg, tt))); PY.push(my(Math.max(-75, Math.min(75, cr(lats, sg, tt)))));
+                if (i > 0) PC.push(PC[i - 1] + Math.hypot(PX[i] - PX[i - 1], PY[i] - PY[i - 1]));
+            }
+            var L = PC[M];
+            function at(d) {
+                d = Math.max(0, Math.min(L, d));
+                var lo = 0, hi = M;
+                while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (PC[mid] > d) hi = mid; else lo = mid }
+                var f = (d - PC[lo]) / ((PC[hi] - PC[lo]) || 1);
+                return { x: PX[lo] + (PX[hi] - PX[lo]) * f, y: PY[lo] + (PY[hi] - PY[lo]) * f };
+            }
+            var PA = .07, PB = .09, PT = 1 - PA / 2 - PB / 2;
+            function prof(s) { var p; if (s < PA) p = s * s / (2 * PA); else if (s <= 1 - PB) p = PA / 2 + (s - PA); else { var q = s - (1 - PB); p = PA / 2 + (1 - PB - PA) + q - q * q / (2 * PB) } return Math.min(1, p / PT) }
+
+            var svg = document.getElementById('svg');
+            svg.innerHTML = '<g id="cam">'
+                + '<g id="tile"><path id="grat" fill="none" stroke="rgba(140,210,255,.16)" stroke-width="1" vector-effect="non-scaling-stroke"/>'
+                + '<path id="land" fill="rgba(60,150,255,.30)" stroke="rgba(150,215,255,.8)" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+                + '<path id="lk" fill="#d4f21b" stroke="#e8441c" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+                + '<circle cx="' + KX + '" cy="' + KY + '" r="1.1" fill="#e8441c" stroke="#fff" stroke-width=".4"/></g>'
+                + '<use href="#tile" x="-' + MW + '"/><use href="#tile" x="' + MW + '"/><use href="#tile" x="' + 2 * MW + '"/>'
+                + '<path id="tr1" fill="none" stroke="rgba(232,68,28,.45)" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+                + '<path id="tr2" fill="none" stroke="#ff6a2a" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 9" vector-effect="non-scaling-stroke"/>'
+                + '<circle id="rg1" cx="' + KX + '" cy="' + KY + '" r="2" fill="none" stroke="#d4f21b" stroke-width="2" vector-effect="non-scaling-stroke"/>'
+                + '<circle id="rg2" cx="' + (KX + MW) + '" cy="' + KY + '" r="2" fill="none" stroke="#d4f21b" stroke-width="2" vector-effect="non-scaling-stroke"/></g>'
+                + '<g id="rk" style="filter:drop-shadow(0 6px 6px rgba(0,0,0,.5))"><g id="fl"><polygon points="0,0 -14,-6 -32,0 -14,6" fill="#ff7a1f"/><polygon points="0,0 -8,-3.5 -19,0 -8,3.5" fill="#d4f21b"/></g>'
+                + '<defs><clipPath id="lc"><rect x="-17" y="-9" width="18" height="18" rx="3"/></clipPath></defs>'
+                + '<polygon points="-34,-8 -51,-25 -20,-10" fill="#d4f21b"/><polygon points="-34,-8 -20,-10 -28,-8" fill="#a9c40f"/>'
+                + '<polygon points="-34,8 -51,25 -20,10" fill="#1e6fe0"/><polygon points="-34,8 -20,10 -28,8" fill="#154fa6"/>'
+                + '<polygon points="-34,-10 14,-10 14,10 -34,10" fill="#f6f8ff"/><polygon points="-34,0 14,0 14,10 -34,10" fill="#cdd5f2"/>'
+                + '<polygon points="-30,-10 -24,-10 -24,10 -30,10" fill="#2a1f8f"/>'
+                + '<polygon points="14,-10 42,0 14,10" fill="#e8441c"/><polygon points="14,0 42,0 14,10" fill="#b3300f"/>'
+                + '<line x1="-34" y1="0" x2="-17" y2="0" stroke="#aab4de" stroke-width=".8"/><line x1="1" y1="0" x2="14" y2="0" stroke="#aab4de" stroke-width=".8"/>'
+                + '<image href="sihalanewsline.png" x="-17" y="-9" width="18" height="18" preserveAspectRatio="xMidYMid slice" clip-path="url(#lc)"/>'
+                + '<rect x="-17" y="-9" width="18" height="18" rx="3" fill="none" stroke="#2a1f8f" stroke-width="1.4"/></g>';
+
+            var proj = d3.geoEquirectangular().scale(MW / (2 * Math.PI)).translate([MW / 2, MH / 2]);
+            var gp = d3.geoPath(proj);
+            document.getElementById('grat').setAttribute('d', gp(d3.geoGraticule10()));
+
+            var btn = document.getElementById('btn'), ready = false;
+            function enable() { if (ready) return; ready = true; btn.disabled = false; btn.firstChild.textContent = '▶ ආරම්භ කරන්න' }
+            function j(u) { return fetch(u).then(function (r) { return r.json() }) }
+            j('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json').then(function (w) {
+                document.getElementById('land').setAttribute('d', gp(topojson.feature(w, w.objects.land)))
+            }).catch(function () { }).then(function () {
+                return j('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json')
+            }).then(function (w) {
+                var g = w.objects.countries.geometries.filter(function (x) { return String(x.id) === '144' });
+                if (g.length) document.getElementById('lk').setAttribute('d', gp(topojson.feature(w, { type: 'GeometryCollection', geometries: g })))
+            }).catch(function () { }).then(enable);
+            setTimeout(enable, 6000);
+
+            var vw = 0, vh = 0, Kj = 1, Kz = 1, rs = 1;
+            function resize() {
+                vw = window.innerWidth; vh = window.innerHeight;
+                Kj = Math.max(vw / MW * 1.8, vh / MH * 1.05); Kz = Kj * 4.2; rs = Math.max(.9, Math.min(1.5, vw / 900));
+            }
+            window.addEventListener('resize', resize); resize();
+
+            var camEl = document.getElementById('cam'), rk = document.getElementById('rk'), fl = document.getElementById('fl');
+            var tr1 = document.getElementById('tr1'), tr2 = document.getElementById('tr2'), rg1 = document.getElementById('rg1'), rg2 = document.getElementById('rg2');
+
+            var audio = new Audio(AUDIO); audio.preload = 'auto';
+            var qr = document.getElementById('qr');
+            document.getElementById('qx').onclick = function () { qr.classList.remove('show') };
+            var TA = 1.8, TB = 12.5, TC = 14.5, TR = 14.2, TQ = 15.2, TE = 16, qrShown = false;
+
+            var t0 = null, site = null, done = false, last = 0, hh = -40, dstr = '', lx = -1e9, ly = -1e9;
+            var cam = { x: KX, y: KY, k: 0 };
+            btn.onclick = function () {
+                audio.play().catch(function () { });
+                t0 = performance.now();
+                document.getElementById('go').classList.add('hide');
+            };
+
+            function frame(now) {
+                if (done) return;
+                requestAnimationFrame(frame);
+                var dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+                function a(r) { return 1 - Math.exp(-dt * r) }
+                var t = now / 1000, ps = (t % 1.6) / 1.6;
+                var ro = (1 - ps).toFixed(2), rr = 2 + ps * 7;
+                rg1.setAttribute('r', rr); rg2.setAttribute('r', rr); rg1.setAttribute('opacity', ro); rg2.setAttribute('opacity', ro);
+                var K0 = Kz * .85, K1 = Kj * 1.5;
+                if (!cam.k) cam.k = K0;
+                var rx = KX, ry = KY, target = -40, flame = .25, jy = Math.sin(t * 2.2) * 3;
+                if (t0 !== null) {
+                    var T = (now - t0) / 1000;
+                    if (T < TA) {
+                        var e = ease(T / TA);
+                        cam.k = K0 + (K1 - K0) * e; flame = .25 + .75 * e; jy = Math.sin(t * 2.2) * 3 * (1 - e);
+                    } else if (T < TB) {
+                        var s = (T - TA) / (TB - TA), d = prof(s) * L, p = at(d), pa = at(d - 3), pb = at(d + 3);
+                        rx = p.x; ry = p.y;
+                        cam.x += (p.x - cam.x) * a(7); cam.y += (p.y - cam.y) * a(7);
+                        cam.k += (K1 * (1 - .3 * Math.sin(Math.PI * s)) - cam.k) * a(2.5);
+                        target = Math.atan2(pb.y - pa.y, pb.x - pa.x) * 180 / Math.PI;
+                        flame = 1; jy = 0;
+                        if (Math.hypot(p.x - lx, p.y - ly) > 2) {
+                            lx = p.x; ly = p.y;
+                            dstr += (dstr ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+                            tr1.setAttribute('d', dstr); tr2.setAttribute('d', dstr);
+                        }
+                    } else {
+                        var e2 = ease((T - TB) / (TC - TB));
+                        rx = KX + MW; ry = KY;
+                        cam.x += (rx - cam.x) * a(4); cam.y += (ry - cam.y) * a(4);
+                        cam.k += (K0 - cam.k) * a(1.4);
+                        flame = 1 - .75 * e2; jy = Math.sin(t * 2.2) * 3 * e2;
+                    }
+                    if (T >= TB - 2 && !site && MODE === 'iframe') {
+                        site = document.createElement('iframe'); site.id = 'site'; site.src = SITE; site.title = 'සිහළ News Line';
+                        document.body.appendChild(site);
+                    }
+                    if (T >= TR && !document.body.classList.contains('rev')) {
+                        document.body.classList.add('rev');
+                        if (MODE === 'iframe') { site.classList.add('show') } else { setTimeout(function () { location.href = SITE }, 1500) }
+                    }
+                    if (T >= TQ && !qrShown) { qrShown = true; qr.classList.add('show') }
+                    if (T >= TE) { done = true; svg.style.display = 'none'; document.querySelector('.bg').style.display = 'none'; return }
+                }
+                var k = cam.k, cy = cam.y, hv = vh / k / 2;
+                if (MH <= vh / k) cy = MH / 2; else cy = Math.max(hv, Math.min(MH - hv, cy));
+                camEl.setAttribute('transform', 'translate(' + vw / 2 + ' ' + vh / 2 + ') scale(' + k + ') translate(' + (-cam.x) + ' ' + (-cy) + ')');
+                hh += (target - hh) * a(6);
+                var sx = vw / 2 + (rx - cam.x) * k, sy = vh / 2 + (ry - cy) * k + jy;
+                rk.setAttribute('transform', 'translate(' + sx + ' ' + sy + ') rotate(' + hh + ') scale(' + rs + ')');
+                fl.setAttribute('transform', 'translate(-34 0) scale(' + (flame * (.85 + Math.random() * .3)) + ' 1)');
+            }
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>
